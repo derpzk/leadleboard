@@ -17,6 +17,8 @@ These notes record useful explanations and verified outcomes, not a transcript. 
 - [Personal score history and file-based routing](#personal-score-history-and-file-based-routing)
 - [Browser-local saved results and card grid](#browser-local-saved-results-and-card-grid)
 - [First server submission endpoint](#first-server-submission-endpoint)
+- [Supabase project setup](#supabase-project-setup)
+- [Server-only Supabase configuration](#server-only-supabase-configuration)
 - [Tailwind styling and alignment](#tailwind-styling-and-alignment)
 - [Git and GitHub workflow](#git-and-github-workflow)
 - [Progress and next exercise](#progress-and-next-exercise)
@@ -97,6 +99,18 @@ When a framework upgrade breaks an already-running server, inspect its terminal 
 - [npm view](https://docs.npmjs.com/cli/v11/commands/npm-view) — reading registry metadata such as peer dependencies and engines.
 - [npm install](https://docs.npmjs.com/cli/v11/commands/npm-install) — version selectors, development dependencies, and lockfile updates.
 - [curl command reference](https://curl.se/docs/manpage.html) — `--silent`, `--output`, and `--write-out` options used for the narrow HTTP status check.
+
+
+**Requested dependency-audit investigation (November 7, 2026):** after the Supabase client installation, `npm audit --json` initially failed with sandbox DNS `ENOTFOUND`; an elevated read-only retry succeeded. Its eight moderate reports trace to one transitive `minimatch` advisory, [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249), rather than eight independent flaws. `npm explain minimatch` identified the development-tool chain: `eslint-config-next@16.4.3` → `typescript-eslint@8.72.1` → `typescript-estree@8.72.1` → `minimatch@10.2.6`. Registry inspection with `npm view` found the latest `typescript-estree` still at 8.72.1 with minimatch range `^10.2.2`.
+
+The advisory covers minimatch versions `>=7.0.0 <11.0.1`, with 11.0.1 patched, and describes CPU/memory denial of service from attacker-controlled glob patterns when `optimizationLevel >= 2`. `npm audit --omit=dev --json` reported **zero production-dependency vulnerabilities** at this checkpoint. The affected chain is development tooling rather than normal application input handling, which lowers exposure; this is not a full application-security assessment. npm's forced fix proposed a major downgrade to `eslint-config-next@15.5.29`; no fix, downgrade, or minimatch override was applied. Recommendation: retain current versions pending a compatible upstream fix rather than apply an untested major override/downgrade.
+
+All audit/explanation/registry commands above were run from the project root at the user's request. They are dependency checks, not tests, lint, type, build, or browser checks. npm funding output is informational. The blocked `unrs-resolver` install script is separate from the audit findings; leave it blocked unless a concrete need arises.
+
+**Audit references**
+
+- [npm audit](https://docs.npmjs.com/cli/v11/commands/npm-audit) — audit reporting and remediation options; consulted during this investigation.
+- [npm install scripts](https://docs.npmjs.com/cli/v11/using-npm/scripts) — package lifecycle scripts, separate from vulnerability findings; consulted during this investigation.
 
 ## Next.js starter and project files
 
@@ -251,7 +265,7 @@ In `WordleGame.standardScore`, the all-green final row selects the solved calcul
 
 **Result builder:** [lib/games/generateResult.ts](../lib/games/generateResult.ts) exports `generateResult<TResult>(game, playerId, result)`. `Game<TResult>` is the behavior provider; `TResult` is its plain parsed data. The helper trims the player ID and throws for an empty ID or an unavailable puzzle date. It constructs a record with `crypto.randomUUID()`, the game's name/date/standardized score, current ISO `submitTime`, and the parsed result. New Wordle records use the agreed numeric score from `WordleGame.standardScore`.
 
-A valid registry preview exposes `gameName`, the parsed `result` as `unknown` at the general boundary, and `renderCard`; it no longer exposes a record-generation callback. The builder lives in a React-free module and is called only on the server after validation. Building an object is not saving it: Submit sends the player name, game name, and structured result; the server creates the complete record, and the form saves that returned record locally. Authentication and shared persistence remain unimplemented. No checks were run.
+A valid registry preview exposes `gameName`, the parsed `result` as `unknown` at the general boundary, and `renderCard`; it no longer exposes a record-generation callback. The builder lives in a React-free module and is called only on the server after validation. Building an object is not saving it: Submit sends the player name, game name, and structured result; the server creates the complete record, and the route now inserts that complete record into Supabase before confirming success. Authentication remains unimplemented; shared insert source exists but successful persistence is unconfirmed. No checks were run.
 
 **Current limits:** the parser accepts plain multiline emoji, so the Discord Markdown-linked example is rejected unless pasted as plain tiles. Failed results marked `X/6` are supported; high-contrast palettes remain unsupported. It does not validate puzzle dates or prove that a result is authentic. No parser tests or app checks were run; these describe the implemented rules, not verified outcomes.
 
@@ -365,7 +379,7 @@ The user requested a page showing all submitted cards in a grid to inspect store
 
 ## First server submission endpoint
 
-**Structured submission step (November 7):** [app/api/results/route.ts](../app/api/results/route.ts) exports the named `POST` handler for `/api/results`. A `route.ts` handles HTTP requests and returns data rather than rendering a page. The incoming `Request` contains the caller's data; `Response.json` constructs the outgoing JSON response. The accepted request contains only `playerName`, `gameName`, and nested structured `result`, rather than a complete client-generated record or raw share text. Invalid JSON, missing/string-field errors, an empty trimmed name, unsupported game, invalid result data, or an undetermined puzzle date produce status **400**. Valid input produces the default **200** response containing `saved: false` and a complete server-generated `validatedResult`.
+**Structured submission and database-save step (November 7):** [app/api/results/route.ts](../app/api/results/route.ts) exports the named `POST` handler for `/api/results`. A `route.ts` handles HTTP requests and returns data rather than rendering a page. The incoming `Request` contains the caller's data; `Response.json` constructs the outgoing JSON response. The accepted request contains only `playerName`, `gameName`, and nested structured `result`, rather than a complete client-generated record or raw share text. Invalid JSON, missing/string-field errors, an empty trimmed name, unsupported game, invalid result data, or an undetermined puzzle date produce status **400**. After validation, a successful database insert produces **201** with `saved: true` and the complete server-generated `savedResult`. A duplicate produces **409**; other database/setup/network failures produce a generic **500**.
 
 The arrow function is `async`, meaning its return value is a Promise representing eventual completion. `await request.json()` waits for the request body to be read and parsed before continuing; `try`/`catch` handles parsing failure. The parsed body starts as `unknown`: object checks, `in`, and `typeof` narrow the outer fields before use. A type annotation alone would not validate external data, and checking the outer fields does not validate nested game data.
 
@@ -373,11 +387,50 @@ The arrow function is `async`, meaning its return value is a Promise representin
 
 The generic `registerValidator<TResult>` adapter keeps each parsed result type paired with its game's date/scoring methods inside a closure. Only server validation calls the React-free [generateResult](../lib/games/generateResult.ts) builder. The form creates no record ID or player ID and submits no score, date, or timestamp. The server constructs those values once using validated game data and a temporary lowercased name-based player ID; extra caller-supplied calculated fields are ignored. This is server recalculation, not authentication. The React/card registry in [lib/games/registry.tsx](../lib/games/registry.tsx) remains separate; supported-game registration is not centralized across browser and server.
 
-[ResultForm](../components/ResultForm.tsx) now awaits `fetch` with method `POST` and `JSON.stringify({playerName: player, gameName: preview.gameName, result: preview.result})`. Preview display can still calculate its own presentation values, while full record creation belongs to the server. It checks the returned record with the exported existing `isResult` guard, then saves that server-generated record through the duplicate-guarded browser-local `saveResult`. `isSubmitting` disables the fields and button while waiting and is reset in `finally`, which runs on success or failure. Validation, network, or local-write failures preserve the input and preview. Success still means a browser-local write: the endpoint explicitly returns `saved: false`, has no database persistence or server duplicate enforcement, and does not supply trusted identity. Next small exercise: trace this browser/server/local-save flow before adding shared persistence. No tests, lint, type, build, or browser checks were run for these changes.
+[ResultForm](../components/ResultForm.tsx) awaits `fetch` with method `POST` and `JSON.stringify({playerName: player, gameName: preview.gameName, result: preview.result})`. Preview display can still calculate presentation values, while full record creation belongs to the server. The form checks `saved: true` and the returned `savedResult` with `isResult`, then reports database success; it no longer calls the browser-local `saveResult`. `isSubmitting` disables fields/button while waiting and resets in `finally`; errors preserve input and preview.
+
+The route now calls [createSupabaseServerClient](../lib/supabase/server.ts), maps record fields from camelCase to database snake_case, and awaits `.insert` into `public.results` without selecting rows back. PostgreSQL error `23505` maps to duplicate feedback (**409**); other database errors or thrown setup/network failures yield generic **500** responses. This is implemented source behavior, not a confirmed database write. The new [server-insert grant migration](../supabase/migrations/20261107000001_allow_server_result_inserts.sql) grants `insert` on `public.results` to `service_role`, the server secret's role. It has not been run by the agents; next user step is to run the whole new file once in SQL Editor. Browser-role privileges remain unchanged.
+
+**User-reported save checkpoint:** after submitting from localhost, the user reports seeing results in Supabase. This supports local-to-Supabase insert success, not independent verification; grant application is inferred from the working save rather than separately reported. `/results` still reads old browser-local storage: newly saved database rows will not appear there yet, and existing local records remain retained. Database retrieval is the next small implementation step. Local configuration details remain uninspected; successful inserts are user-reported, and a shared read/reload flow remains unconfirmed; no credentials were read, database calls executed, or tests/lint/type/build/browser checks run by the agents. Milestone 6 is not yet complete.
 
 **References**
 
 - [Installed Next.js Route Handlers guide](../node_modules/next/dist/docs/01-app/01-getting-started/15-route-handlers.md) — reviewed for this installed framework version; explains `route.ts`, named HTTP-method exports, and Web `Request`/`Response` APIs. This local link requires installed dependencies.
+
+## Supabase project setup
+
+**Setup checkpoint (November 7):** after project-creation guidance, the user reports reaching the Supabase project dashboard. Project creation is user-reported complete; the chosen name, plan, region, and password handling were not explicitly confirmed. Guidance was to create `leadleboard`, use the Free plan, keep a generated database password in a password manager (separate from the dashboard login), and choose a nearby available region. The user subsequently reported successful execution of the results-table migration below; application integration and result inserts remain unimplemented, and database state has not been independently verified.
+
+**Accepted interim identity:** keep typed player names for initial persistence. `player_id` remains a temporary text ID separate from the display snapshot `player_name`. This separation leaves room for account IDs later, but associating historical name-based records with authenticated owners will require an explicit migration/claiming decision; a matching name does not prove ownership.
+
+**Migration applied successfully per user report:** [20261107000000_create_results.sql](../supabase/migrations/20261107000000_create_results.sql) maps the existing [Result type](../types/result.ts) to `public.results`: server-supplied `id` → `uuid` primary key; required `player_id` and `game_name` → `text`; optional `player_name` → `text`; `date_played` → `date`; `submit_time` → `timestamptz`; nullable `score` → `numeric`; required game-specific `result` → `jsonb`. Shared fields become individually queryable columns while game-specific data stays nested. A primary key uniquely identifies a row; `not null` requires a value; `unique (player_id, game_name, date_played)` enforces the accepted one-result-per-player/game/puzzle rule at the database level.
+
+The migration wraps creation in `begin`/`commit`, enables row level security (RLS), and revokes all table privileges from `anon` and `authenticated`. Table grants determine permitted operations; RLS policies determine permitted rows. No browser access policies/grants are configured. Server insert integration is now implemented with a separate pending service_role grant. The user reports SQL Editor success after pasting and running the whole migration. This is user-reported application, not an independently inspected database state; no database commands or checks were executed by the agents.
+
+**Installation checkpoint:** the user reports `npm install @supabase/supabase-js` succeeded from the project; `package.json` now specifies `^2.119.0`. The command adds the Supabase JavaScript client. npm records the dependency in `package.json`, records resolved versions in `package-lock.json`, and installs package files in `node_modules`. Installing a client library does not connect the app or insert data. To inspect the table, open Supabase Dashboard → Table Editor → `public` → `results`; its actual contents remain uninspected; the endpoint now implements inserts, but saving is unconfirmed. Actual table contents have not been inspected.
+
+**References**
+
+- [Supabase JavaScript installation](https://supabase.com/docs/reference/javascript/installing) — official npm command for adding the client library; installation was subsequently reported successful by the user.
+- [Supabase Next.js quickstart](https://supabase.com/docs/guides/getting-started/quickstarts/nextjs) — official project-creation entry point and later Next.js integration guidance; do not scaffold another app for this existing project.
+- [Supabase available regions](https://supabase.com/docs/guides/platform/regions) — region choices when creating the hosted project. Both references were reviewed for this proposed setup step.
+- [Supabase tables and data](https://supabase.com/docs/guides/database/tables) — introduces rows, typed columns, primary keys, and table creation.
+- [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security) — explains the separate roles of table grants and row policies; reviewed for the prepared migration.
+
+
+## Server-only Supabase configuration
+
+**Configuration helper written; connection unconfirmed:** [.env.example](../.env.example) contains placeholders for `SUPABASE_URL` and `SUPABASE_SECRET_KEY`, with no real credentials. `.gitignore` permits that example while continuing to ignore other `.env` files. [createSupabaseServerClient](../lib/supabase/server.ts) imports `server-only` and reads environment values when called, throwing a descriptive error if either is missing. It uses `createClient` with `persistSession`, `autoRefreshToken`, and `detectSessionInUrl` disabled because this helper is for privileged server operations rather than a browser login session. The submission route now uses it for inserts; no database request has been executed or verified by the agents.
+
+**Suggested commands, not run:** from `/Users/zachk/Desktop/leadleboard`, run `cp .env.example .env.local` to create the local settings file, then fill its placeholders locally. Obtain the project URL from Supabase's Connect dialog and a secret key (`sb_secret_…`) from Settings → API Keys. The secret key is distinct from the publishable key and database password; never prefix it with `NEXT_PUBLIC_`, which exposes values to browser code. Restart the development server after configuration (stop its terminal with Ctrl-C, then `npm run dev`). Local values and restart are unconfirmed; no credentials were read.
+
+The server secret has privileged access that bypasses RLS, so future route code must validate inputs; this configuration does not authenticate the typed player name. `server-only` guards the module boundary and needs no separate package installation in this Next.js setup. No tests, lint, type, build, browser, or connection checks were run; database insert source is now implemented and saving is user-reported successful; grant application is inferred, not separately confirmed.
+
+**References**
+
+- [Supabase API keys](https://supabase.com/docs/guides/api/api-keys) — secret versus publishable keys and privileged server access; consulted for this step.
+- [Supabase client initialization](https://supabase.com/docs/reference/javascript/initializing) — `createClient` setup and auth configuration; consulted for this step.
+- [Installed Next.js documentation](../node_modules/next/dist/docs/) — local environment-variable and server/client boundary guides were consulted for this implementation.
 
 ## Tailwind styling and alignment
 

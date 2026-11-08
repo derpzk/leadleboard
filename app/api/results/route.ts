@@ -1,4 +1,5 @@
 import { validateGameResult } from "@/lib/games/validation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const POST = async (request: Request) => {
   // JSON comes from outside our program, so its shape starts as unknown.
@@ -35,9 +36,40 @@ export const POST = async (request: Request) => {
     );
   }
 
-  // This first step validates only. Nothing has been saved.
-  return Response.json({
-    saved: false,
-    validatedResult: validation.data,
-  });
+  const record = validation.data;
+  try {
+    const supabase = createSupabaseServerClient();
+    // Translate our TypeScript field names to the database's column names.
+    const { error } = await supabase.from("results").insert({
+      id: record.id,
+      player_id: record.playerId,
+      player_name: record.playerName ?? null,
+      game_name: record.gameName,
+      date_played: record.datePlayed,
+      submit_time: record.submitTime,
+      score: record.score,
+      result: record.result,
+    });
+
+    if (error) {
+      // PostgreSQL's unique constraint also prevents concurrent duplicates.
+      if (error.code === "23505") {
+        return Response.json(
+          { error: `${playerName} already has a saved result for this ${record.gameName} puzzle.` },
+          { status: 409 },
+        );
+      }
+      return Response.json(
+        { error: "Couldn't save the result to the database. Please try again." },
+        { status: 500 },
+      );
+    }
+
+    return Response.json({ saved: true, savedResult: record }, { status: 201 });
+  } catch {
+    return Response.json(
+      { error: "Couldn't connect to the database. Check the server configuration and try again." },
+      { status: 500 },
+    );
+  }
 };

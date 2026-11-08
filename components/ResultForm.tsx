@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
 import { identifyResult } from "@/lib/games/registry";
-import { isResult, saveResult } from "@/lib/resultStorage";
+import { isResult } from "@/lib/resultStorage";
 
 const ResultForm = () => {
   const [playerName, setPlayerName] = useState("");
@@ -46,21 +46,16 @@ const ResultForm = () => {
       if (!response.ok) {
         const message = body && typeof body === "object" &&
           "error" in body && typeof body.error === "string"
-          ? body.error : "The server couldn't validate this result.";
+          ? body.error : "The server couldn't save this result.";
         setFeedback(message);
         return;
       }
       if (!body || typeof body !== "object" ||
-        !("validatedResult" in body) || !isResult(body.validatedResult)) {
+        !("saved" in body) || body.saved !== true ||
+        !("savedResult" in body) || !isResult(body.savedResult)) {
         throw new Error("The server returned an invalid result record.");
       }
-      // The endpoint validates only; persistence is still browser-local.
-      const status = saveResult(body.validatedResult);
-      if (status === "duplicate") {
-        setFeedback(`${player} already has a saved result for this ${body.validatedResult.gameName} puzzle in this browser.`);
-        return;
-      }
-      setFeedback("Result saved in this browser. Open All results to view it.");
+      setFeedback("Result saved to the database.");
     } catch {
       setFeedback("Couldn't validate or save this result. Your input is still here so you can try again.");
     } finally {
