@@ -1,5 +1,23 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { io } from "next/cache";
 import ResultsGrid from "@/components/ResultsGrid";
+import { getResults } from "@/lib/supabase/results";
+import type { Result } from "@/types/result";
+
+const SavedResults = async () => {
+  // Keep credentials and database reads out of the prerendered page shell.
+  await io();
+
+  let entries: Result[];
+  try {
+    entries = await getResults();
+  } catch {
+    return <p role="alert">Couldn't load results from the database. Please reload to try again.</p>;
+  }
+
+  return <ResultsGrid entries={entries} />;
+};
 
 const Results = () => {
   return (
@@ -8,10 +26,12 @@ const Results = () => {
       <header className="my-8">
         <h1 className="text-3xl font-bold">All results</h1>
         <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          Submitted plays, newest first. These records are saved only in this browser.
+          Submitted plays from the shared database, newest first.
         </p>
       </header>
-      <ResultsGrid />
+      <Suspense fallback={<p role="status">Loading results…</p>}>
+        <SavedResults />
+      </Suspense>
     </main>
   );
 };

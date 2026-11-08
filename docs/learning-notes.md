@@ -19,6 +19,7 @@ These notes record useful explanations and verified outcomes, not a transcript. 
 - [First server submission endpoint](#first-server-submission-endpoint)
 - [Supabase project setup](#supabase-project-setup)
 - [Server-only Supabase configuration](#server-only-supabase-configuration)
+- [Reading saved results on the server](#reading-saved-results-on-the-server)
 - [Tailwind styling and alignment](#tailwind-styling-and-alignment)
 - [Git and GitHub workflow](#git-and-github-workflow)
 - [Progress and next exercise](#progress-and-next-exercise)
@@ -391,7 +392,7 @@ The generic `registerValidator<TResult>` adapter keeps each parsed result type p
 
 The route now calls [createSupabaseServerClient](../lib/supabase/server.ts), maps record fields from camelCase to database snake_case, and awaits `.insert` into `public.results` without selecting rows back. PostgreSQL error `23505` maps to duplicate feedback (**409**); other database errors or thrown setup/network failures yield generic **500** responses. This is implemented source behavior, not a confirmed database write. The new [server-insert grant migration](../supabase/migrations/20261107000001_allow_server_result_inserts.sql) grants `insert` on `public.results` to `service_role`, the server secret's role. It has not been run by the agents; next user step is to run the whole new file once in SQL Editor. Browser-role privileges remain unchanged.
 
-**User-reported save checkpoint:** after submitting from localhost, the user reports seeing results in Supabase. This supports local-to-Supabase insert success, not independent verification; grant application is inferred from the working save rather than separately reported. `/results` still reads old browser-local storage: newly saved database rows will not appear there yet, and existing local records remain retained. Database retrieval is the next small implementation step. Local configuration details remain uninspected; successful inserts are user-reported, and a shared read/reload flow remains unconfirmed; no credentials were read, database calls executed, or tests/lint/type/build/browser checks run by the agents. Milestone 6 is not yet complete.
+**User-reported save checkpoint:** after submitting from localhost, the user reports seeing results in Supabase. This supports local-to-Supabase insert success, not independent verification; grant application is inferred from the working save rather than separately reported. `/results` has since been changed to a server database query (see [Reading saved results](#reading-saved-results-on-the-server)); the new SELECT grant and user verification are pending. Existing local records remain retained but are no longer read by that page. Local configuration details remain uninspected; successful inserts are user-reported, and a shared read/reload flow remains unconfirmed; no credentials were read, database calls executed, or tests/lint/type/build/browser checks run by the agents. Milestone 6 is not yet complete.
 
 **References**
 
@@ -431,6 +432,21 @@ The server secret has privileged access that bypasses RLS, so future route code 
 - [Supabase API keys](https://supabase.com/docs/guides/api/api-keys) — secret versus publishable keys and privileged server access; consulted for this step.
 - [Supabase client initialization](https://supabase.com/docs/reference/javascript/initializing) — `createClient` setup and auth configuration; consulted for this step.
 - [Installed Next.js documentation](../node_modules/next/dist/docs/) — local environment-variable and server/client boundary guides were consulted for this implementation.
+
+
+## Reading saved results on the server
+
+**Implemented source; user verification pending:** [app/results/page.tsx](../app/results/page.tsx) now renders shared database results rather than loading browser-local records. Its async `SavedResults` Server Component waits for `io()` before querying because this project enables Cache Components. `Suspense` supplies loading UI; query failures show an alert distinct from a successful empty collection. No public GET endpoint is needed: a Server Component can call the database helper directly without exposing its secret to browser code.
+
+[getResults](../lib/supabase/results.ts) is server-only, selects explicit columns, orders newest `submit_time` first and then `id` descending for consistent ties, and maps database snake_case fields to `Result`. It preserves nullable scores and omits optional player names when the database value is null. `.returns<ResultRow[]>()` supplies a TypeScript result shape; it is not runtime validation. [ResultsGrid](../components/ResultsGrid.tsx) is now synchronous presentation with an `entries: Result[]` prop, with no client effect/state or localStorage read.
+
+**Pending user step:** run the whole [server-read grant migration](../supabase/migrations/20261107000002_allow_server_result_reads.sql) once in Supabase SQL Editor, then reload `http://localhost:3000/results`. It grants SELECT only to `service_role`; browser roles remain unchanged. No migration, database read, or tests/lint/type/build/browser checks were executed by the agents. The shared retrieval/reload behavior remains unconfirmed and Milestone 6 is not marked complete. Existing localStorage records are untouched and are not migrated into Supabase. There are no live updates or pagination; Supabase's default row cap still applies, so this does not promise unlimited history.
+
+**References**
+
+- [Supabase select](https://supabase.com/docs/reference/javascript/select) — selecting table rows/columns and response limits; consulted for this step.
+- [Supabase order](https://supabase.com/docs/reference/javascript/order) — ordering query results; consulted for this step.
+- [Installed Next.js documentation](../node_modules/next/dist/docs/) — fetching-data, `io`, and connection guides were consulted for this installed Cache Components configuration.
 
 ## Tailwind styling and alignment
 
@@ -474,6 +490,11 @@ Run project Git commands from `/Users/zachk/Desktop/battledle`. The following re
 **Deployment preparation (November 7, 2026):** local Git configuration points `origin` to `https://github.com/derpzk/leadleboard.git`; this verifies the configured URL only, not remote contents or a successful latest push. Scoring and documentation changes are uncommitted. No Vercel CLI or existing Vercel configuration was found, and no deployment account was inspected. The next user step is to commit/push those changes, then import the GitHub repository into Vercel. Vercel's Git integration supports automatic deployments from subsequent pushes; no deployment is complete yet.
 
 Never commit credentials, tokens, or other secrets. [.gitignore](../.gitignore) records files Git should ignore; it does not remove secrets already recorded in history.
+
+**Requested ignore-rule review (November 7):** the existing `.env*` rule protects local/production settings and matching backups, while `!.env.example` permits the placeholder-only example. Rules were expanded for private-key/certificate files, logs, local credential/configuration directories, Supabase temporary state, and database backups. Keep generated or private local artifacts out of Git while preserving source migrations and `package-lock.json`.
+
+The focused review read `.gitignore`/`.env.example` and inspected tracked filenames with `git ls-files`; it did not read real environment files or credentials. `git check-ignore -v --no-index <sample-path>` was run from the project root for representative paths: `-v` shows the matching rule and `--no-index` checks ignore behavior even for tracked paths. Targeted private/generated paths matched ignore rules; the example exception permits `.env.example`; migrations and the lockfile were not ignored. Tracked filenames showed no credential `.env` files beyond that placeholder example and no credential key files. This was not a file-history/content secret scan: ignore rules protect matching filenames, not secret values pasted into source. No application tests were run.
+
 
 **References**
 

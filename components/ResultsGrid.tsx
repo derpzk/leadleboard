@@ -1,30 +1,12 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { renderSavedResult } from "@/lib/games/registry";
-import { loadResults } from "@/lib/resultStorage";
 import type { Result } from "@/types/result";
 
-const ResultsGrid = () => {
-  const [entries, setEntries] = useState<Result[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+type ResultsGridProps = {
+  entries: Result[];
+};
 
-  useEffect(() => {
-    try {
-      setEntries(loadResults().sort((first, second) =>
-        Date.parse(second.submitTime) - Date.parse(first.submitTime),
-      ));
-    } catch {
-      setError("Couldn't read saved results from this browser. Your stored data has not been changed.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  if (loading) return <p role="status">Loading results…</p>;
-  if (error) return <p role="alert">{error}</p>;
+const ResultsGrid = ({ entries }: ResultsGridProps) => {
   if (entries.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-zinc-300 p-8 text-center dark:border-zinc-700">
