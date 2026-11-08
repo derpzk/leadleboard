@@ -1,6 +1,6 @@
 import type { Result } from "@/types/result";
 
-const isResult = (value: unknown): value is Result => {
+export const isResult = (value: unknown): value is Result => {
   if (!value || typeof value !== "object") return false;
   const record = value as Partial<Result>;
   return typeof record.id === "string" && typeof record.playerId === "string" &&

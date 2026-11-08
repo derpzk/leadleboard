@@ -7,8 +7,8 @@ import type { WordleResult } from "@/types/wordle";
 
 type ResultPreview = {
   gameName: string;
+  result: unknown;
   renderCard: (player: string) => ReactNode;
-  generateResult: (playerId: string) => Result;
 };
 
 type GameMatch =
@@ -20,32 +20,6 @@ export type ResultIdentification =
   | { status: "empty" }
   | { status: "undetected"; message: string }
   | Exclude<GameMatch, { status: "unrecognized" }>;
-
-export const generateResult = <TResult,>(
-  game: Game<TResult>,
-  playerId: string,
-  result: TResult,
-): Result<TResult> => {
-  const normalizedPlayerId = playerId.trim();
-  if (!normalizedPlayerId) {
-    throw new Error("A player ID is required to create a result record.");
-  }
-
-  const datePlayed = game.dayPlayed(result);
-  if (datePlayed === null) {
-    throw new Error(`Couldn't determine the puzzle date for ${game.gameName}.`);
-  }
-
-  return {
-    id: crypto.randomUUID(),
-    playerId: normalizedPlayerId,
-    gameName: game.gameName,
-    datePlayed,
-    submitTime: new Date().toISOString(),
-    score: game.standardScore(result),
-    result,
-  };
-};
 
 // Pair each game's parser with a card accepting that parser's result type.
 const registerGame = <TResult,>(
@@ -68,8 +42,8 @@ const registerGame = <TResult,>(
       status: "valid",
       preview: {
         gameName: game.gameName,
+        result,
         renderCard: (player) => <Card result={result} player={player} />,
-        generateResult: (playerId) => generateResult(game, playerId, result),
       },
     };
   };

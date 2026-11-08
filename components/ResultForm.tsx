@@ -3,12 +3,13 @@
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
 import { identifyResult } from "@/lib/games/registry";
-import { saveResult } from "@/lib/resultStorage";
+import { isResult, saveResult } from "@/lib/resultStorage";
 
 const ResultForm = () => {
   const [playerName, setPlayerName] = useState("");
   const [shareResult, setShareResult] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const playerNameId = useId();
   const shareResultId = useId();
   const shareInstructionsId = useId();
@@ -20,27 +21,50 @@ const ResultForm = () => {
     ? identification.message
     : "";
   const player = playerName.trim();
-  const canSubmit = player.length > 0 && preview !== null;
+  const canSubmit = player.length > 0 && preview !== null && !isSubmitting;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!canSubmit || !preview) {
       return;
     }
 
+    setIsSubmitting(true);
+    setFeedback("");
     try {
-      // Temporary local identity, not an authenticated account ID.
-      const playerId = `local:${player.toLowerCase()}`;
-      const record = preview.generateResult(playerId);
-      const status = saveResult({ ...record, playerName: player });
+      const response = await fetch("/api/results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerName: player,
+          gameName: preview.gameName,
+          result: preview.result,
+        }),
+      });
+      const body: unknown = await response.json();
+      if (!response.ok) {
+        const message = body && typeof body === "object" &&
+          "error" in body && typeof body.error === "string"
+          ? body.error : "The server couldn't validate this result.";
+        setFeedback(message);
+        return;
+      }
+      if (!body || typeof body !== "object" ||
+        !("validatedResult" in body) || !isResult(body.validatedResult)) {
+        throw new Error("The server returned an invalid result record.");
+      }
+      // The endpoint validates only; persistence is still browser-local.
+      const status = saveResult(body.validatedResult);
       if (status === "duplicate") {
-        setFeedback(`${player} already has a saved result for this ${record.gameName} puzzle in this browser.`);
+        setFeedback(`${player} already has a saved result for this ${body.validatedResult.gameName} puzzle in this browser.`);
         return;
       }
       setFeedback("Result saved in this browser. Open All results to view it.");
     } catch {
-      setFeedback("Couldn't save this result in your browser. Your input is still here so you can try again.");
+      setFeedback("Couldn't validate or save this result. Your input is still here so you can try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -59,6 +83,7 @@ const ResultForm = () => {
         }}
         className="rounded border border-zinc-400 px-3 py-2"
         required
+        disabled={isSubmitting}
       />
       <label htmlFor={shareResultId} className="mt-2">
         Game result
@@ -84,6 +109,7 @@ const ResultForm = () => {
         placeholder="Paste your game's share result here…"
         className="w-full min-w-0 resize-y rounded border border-zinc-400 px-3 py-2"
         required
+        disabled={isSubmitting}
       />
       <p id={detectionFeedbackId} role="status" className="text-sm text-red-700 dark:text-red-400">
         {detectionError}
@@ -93,7 +119,7 @@ const ResultForm = () => {
         disabled={!canSubmit}
         className="mt-3 self-start rounded-lg bg-zinc-900 px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
       >
-        Submit result
+        {isSubmitting ? "Submitting…" : "Submit result"}
       </button>
       <p role="status">{feedback}</p>
     </form>

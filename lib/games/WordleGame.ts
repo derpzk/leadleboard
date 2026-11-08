@@ -34,24 +34,36 @@ export class WordleGame extends Game<WordleResult> {
       grid.shift();
     }
 
-    if (!Number.isSafeInteger(puzzleNumber) || grid.length !== guesses) {
+    const result = this.validateResult({ puzzleNumber, guesses, grid });
+    if (result === null || (grid[grid.length - 1] === "🟩🟩🟩🟩🟩") !== won) {
       return null;
     }
 
-    const validRow = /^[⬛⬜🟨🟩]{5}$/u;
-    if (!grid.every((row) => validRow.test(row))) {
+    return result;
+  }
+
+  validateResult(value: unknown): WordleResult | null {
+    if (!value || typeof value !== "object") return null;
+    const result = value as Partial<WordleResult>;
+    const { puzzleNumber, guesses, grid } = result;
+    if (
+      typeof puzzleNumber !== "number" || !Number.isSafeInteger(puzzleNumber) || puzzleNumber < 1 ||
+      typeof guesses !== "number" || !Number.isInteger(guesses) || guesses < 1 || guesses > 6 ||
+      !Array.isArray(grid) || grid.length !== guesses ||
+      !grid.every((row) => typeof row === "string" && /^[⬛⬜🟨🟩]{5}$/u.test(row))
+    ) {
       return null;
     }
 
     const winningRow = "🟩🟩🟩🟩🟩";
     if (
-      (grid[grid.length - 1] === winningRow) !== won ||
+      (grid[grid.length - 1] !== winningRow && guesses !== 6) ||
       grid.slice(0, -1).includes(winningRow)
     ) {
       return null;
     }
 
-    return { puzzleNumber, guesses, grid };
+    return { puzzleNumber, guesses, grid: [...grid] };
   }
 
   dayPlayed(result: WordleResult): string | null {
