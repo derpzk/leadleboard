@@ -6,7 +6,7 @@ export abstract class Game<TResult> {
   abstract parse(text: string): TResult | null;
   // Puzzle calendar date (YYYY-MM-DD), not the submission timestamp.
   abstract dayPlayed(result: TResult): string | null;
-  // Return a standardized score from 1–100, or null while scoring is undefined.
+  // Return a standardized score from 0–100, or null while scoring is undefined.
   abstract standardScore(result: TResult): number | null;
   // Return a string representing the result of the game
   abstract resultMessage(result: TResult): string;

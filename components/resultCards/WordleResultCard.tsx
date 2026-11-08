@@ -17,7 +17,7 @@ const WordleResultCard = ({ result, player, datePlayed, score }: WordleResultCar
       datePlayed={datePlayed ?? wordleGame.dayPlayed(result) ?? undefined}
       score={score === undefined ? wordleGame.standardScore(result) : score}
       message={wordleGame.resultMessage(result)}
-      resultLabel={`Puzzle #${result.puzzleNumber.toLocaleString("en-US")} · ${result.guesses}/6`}
+      resultLabel={`Puzzle #${result.puzzleNumber.toLocaleString("en-US")} · ${result.grid[result.grid.length - 1] === "🟩🟩🟩🟩🟩" ? result.guesses : "X"}/6`}
     >
       <figure>
         <figcaption className="sr-only">Wordle guess grid</figcaption>

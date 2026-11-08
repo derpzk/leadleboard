@@ -9,7 +9,7 @@ export class WordleGame extends Game<WordleResult> {
     return /^Wordle\s/.test(text.trim());
   }
 
-  // Supports solved results in the standard green/yellow tile palette.
+  // Supports solved and unsuccessful results in the standard tile palette.
   parse(text: string): WordleResult | null {
     if (!this.recognizes(text)) {
       return null;
@@ -17,7 +17,7 @@ export class WordleGame extends Game<WordleResult> {
 
     const lines = text.trim().replaceAll("\r\n", "\n").split("\n");
     const match = lines[0].match(
-      /^Wordle ([1-9]\d*|[1-9]\d{0,2}(?:,\d{3})+) ([1-6])\/6\*?$/,
+      /^Wordle ([1-9]\d*|[1-9]\d{0,2}(?:,\d{3})+) ([1-6]|X)\/6\*?$/,
     );
 
     if (!match) {
@@ -25,7 +25,8 @@ export class WordleGame extends Game<WordleResult> {
     }
 
     const puzzleNumber = Number(match[1].replaceAll(",", ""));
-    const guesses = Number(match[2]);
+    const won = match[2] !== "X";
+    const guesses = won ? Number(match[2]) : 6;
     const grid = lines.slice(1);
 
     // A single blank line may separate the header and grid.
@@ -44,7 +45,7 @@ export class WordleGame extends Game<WordleResult> {
 
     const winningRow = "🟩🟩🟩🟩🟩";
     if (
-      grid[grid.length - 1] !== winningRow ||
+      (grid[grid.length - 1] === winningRow) !== won ||
       grid.slice(0, -1).includes(winningRow)
     ) {
       return null;
@@ -65,19 +66,31 @@ export class WordleGame extends Game<WordleResult> {
       firstPuzzleDate + result.puzzleNumber * millisecondsPerDay,
     );
 
-    if (Number.isNaN(puzzleDate.getTime()) || puzzleDate.getUTCFullYear() > 9999) {
+    if (
+      Number.isNaN(puzzleDate.getTime()) ||
+      puzzleDate.getUTCFullYear() > 9999
+    ) {
       return null;
     }
 
     return puzzleDate.toISOString().slice(0, 10);
   }
 
-  standardScore(_result: WordleResult): number | null {
-    // Wordle's standardized scoring formula has not been decided yet.
-    return null;
+  standardScore(result: WordleResult): number {
+    const lastRow = result.grid[result.grid.length - 1];
+    if (lastRow === "🟩🟩🟩🟩🟩") {
+      return 100 - (result.guesses - 1) * 10;
+    }
+
+    // Array.from treats each emoji as one tile, rather than UTF-16 code units.
+    const greens = Array.from(lastRow ?? "").filter((tile) => tile === "🟩").length;
+    return greens * 10;
   }
 
   resultMessage(result: WordleResult): string {
+    if (result.grid[result.grid.length - 1] !== "🟩🟩🟩🟩🟩") {
+      return `Wordle puzzle ${result.puzzleNumber}: not solved in ${result.guesses} guesses.`;
+    }
     const guessLabel = result.guesses === 1 ? "guess" : "guesses";
     return `Wordle puzzle ${result.puzzleNumber}: solved in ${result.guesses} ${guessLabel}.`;
   }
@@ -86,7 +99,7 @@ export class WordleGame extends Game<WordleResult> {
     const result = this.parse(text);
 
     if (!result) {
-      return "Couldn't read this result. Paste a solved Wordle result with its header and each five-tile row on a separate line, using ⬛, ⬜, 🟨, or 🟩. Remove any links.";
+      return "Couldn't read this result. Paste a Wordle result with its header (1–6/6 or X/6) and each five-tile row on a separate line, using ⬛, ⬜, 🟨, or 🟩. Remove any links.";
     }
 
     return this.resultMessage(result);

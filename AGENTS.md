@@ -25,10 +25,11 @@ Clarified by the user on October 30, 2026; this is planned behavior, not a claim
 
 - The homepage directly mounts one `ResultForm` containing player name and a multiline pasted game-result field. The user restored the name input and requested no extra `GameScoreForm` wrapper. Names are temporary display text, not authenticated identity. The eventual form should accept all supported games.
 - A parsing layer identifies the game, delegates to its parser, and produces a structured score record for storage. Only games with implemented parsing support are accepted.
-- Each game has its own class responsible for its custom standardized-score calculation on a 1–100 scale. Keep game-specific interpretation and scoring separate from the reusable form and leaderboard presentation.
+- Each game has its own class responsible for its custom standardized-score calculation. The original planned scale was 1–100; Wordle now uses an agreed 0–100 exception. Keep game-specific interpretation and scoring separate from the reusable form and leaderboard presentation.
 - The homepage also contains a player leaderboard derived from players' score records across supported games. The formula for combining records is still undecided.
 - The chronological submission list and the player leaderboard are separate concepts. Removing ranks from submission cards did not remove the planned player leaderboard.
-- Storage backend, scoring formulas, failure handling, weighting, time windows, and aggregation remain to be implemented or decided. Do not invent these rules or complete the architecture automatically.
+- Wordle scoring is agreed and implemented: solved results score 100/90/80/70/60/50 for one through six guesses; unsuccessful `X/6` results earn 10 points per green tile in the final row. A valid failed row has at most four greens (0–40 actual points); five greens are a win. Wordle uses 0–100, an exception to the original 1–100 plan.
+- Storage backend, other-game scoring formulas and failure handling, weighting, time windows, and aggregation remain to be implemented or decided. Do not invent these rules or complete the architecture automatically.
 
 ### Planned form workflow
 
@@ -49,7 +50,7 @@ Recorded from the user's workflow discussion on October 30, 2026. This describes
 - Avoid showing errors on every incomplete edit; show a preview once valid. Exact invalid-input messaging remains a UI detail to refine.
 - Parsing during edits must not save or issue server requests. Reserve server submission for Submit.
 - Game classes own recognition, parsing/validation, formatting, and game-specific standardized scoring. They produce plain typed data; database records are not class instances and do not store methods.
-- Use `Result<TResult>` for shared submission fields plus a typed game-specific `result` such as `WordleResult`. The current record fields are id, playerId, gameName, datePlayed, submitTime, score, and result. The registry generateResult helper is called on Submit and records are saved to browser localStorage, not a shared backend. Authentication/account linkage, database schema, and standardized scoring formulas remain unresolved; Wordle puzzle-date calculation exists.
+- Use `Result<TResult>` for shared submission fields plus a typed game-specific `result` such as `WordleResult`. The current record fields are id, playerId, gameName, datePlayed, submitTime, score, and result. The registry generateResult helper is called on Submit and records are saved to browser localStorage, not a shared backend. Authentication/account linkage, database schema, and other-game standardized scoring formulas remain unresolved; Wordle puzzle-date calculation exists.
 - The server must validate submitted values and calculate trusted game-specific values before storage. Client-side parsing is for feedback and does not establish trust.
 
 ## Primary objective: learn full-stack development
@@ -145,7 +146,7 @@ Start with Wordle and expand after the core workflow is understood. These milest
 Do not silently invent rules for these unresolved questions:
 - What is a valid result for each game, including failures?
 - How are guesses, elapsed time, and mistakes represented?
-- What formula does each game's class use to produce a standardized score from 1–100?
+- What formula does each remaining game's class use to produce a standardized score? Wordle's accepted 0–100 rule is recorded above.
 - How are a player's standardized results combined: averages, totals, best results, or another method? How are game participation, weighting, and time windows handled?
 - How are ties and missing submissions handled?
 - Which puzzle date and time zone define a day and a week?
@@ -174,7 +175,7 @@ Last checked: October 15, 2026.
 
 The next session should resume with:
 1. Review the implemented live `ResultForm` preview and validity-gated Submit, then choose the next small step toward result records and saving. Keep local parsing separate from server validation/persistence; browser-local saving exists, but no backend save; distinguish the two clearly.
-2. Continue from abstract `Game<TResult>` and its stateless `WordleGame` subclass for behavior, plus plain `Result<TResult>` for individual submissions. Records have common player/game/date/message/standardized-score fields and a typed game-specific `result`; fixtures explicitly use `Result<Pick<WordleResult, "guesses">>`, not full parsed grids. The typed registry in `lib/games/registry.tsx` now dispatches identification and card rendering, with Wordle as its only registration. Keep `ResultForm` game-neutral and game classes independent of React. Extend registered games incrementally and agree on Wordle's standardized-score formula before implementing scoring. No form-to-record integration, score calculation, authenticated user ID, or persistence exists yet. Later connect stored records to a separate player leaderboard. Preserve submission-date ordering in any submission list.
+2. Continue from abstract `Game<TResult>` and its stateless `WordleGame` subclass for behavior, plus plain `Result<TResult>` for individual submissions. Records have common player/game/date/message/standardized-score fields and a typed game-specific `result`; fixtures explicitly use `Result<Pick<WordleResult, "guesses">>`, not full parsed grids. The typed registry in `lib/games/registry.tsx` now dispatches identification and card rendering, with Wordle as its only registration. Keep `ResultForm` game-neutral and game classes independent of React. Extend registered games incrementally. Wordle scoring and solved/unsuccessful parsing are now implemented under the rule above; form-to-record integration and browser-local persistence exist. Authenticated user IDs, shared backend persistence, and server validation remain unimplemented. No app checks were run for the scoring change. Later connect stored records to a separate player leaderboard. Preserve submission-date ordering in any submission list.
 3. Continue through small exercises, marking milestones complete only when their completion criteria are satisfied.
 
 Future sessions should inspect the actual files and user changes before deciding where to resume. Update progress here as milestones are completed or requirements change; do not mark suggested work as completed.
