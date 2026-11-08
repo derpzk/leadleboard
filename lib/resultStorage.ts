@@ -47,8 +47,17 @@ export const loadResults = (): Result[] => {
   return entries;
 };
 
-export const saveResult = (entry: Result): void => {
+export const saveResult = (entry: Result): "saved" | "duplicate" => {
   if (!isResult(entry)) throw new Error("Cannot save an invalid result record.");
   const entries = loadResults();
+  // For Wordle, the puzzle date uniquely identifies the puzzle.
+  const duplicate = entries.some((saved) =>
+    saved.playerId === entry.playerId &&
+    saved.gameName === entry.gameName &&
+    saved.datePlayed === entry.datePlayed
+  );
+  if (duplicate) return "duplicate";
+
   localStorage.setItem(storageKey, JSON.stringify([...entries, entry]));
+  return "saved";
 };

@@ -353,6 +353,10 @@ The user requested a page showing all submitted cards in a grid to inspect store
 
 **Rendering normalized records:** the registry's `renderSavedResult` selects a renderer by stored `gameName`, checks the stored Wordle result shape, and renders from its structured fields instead of reparsing share text. `ResultsGrid` orders plain records by `submitTime` and displays fallback cards for unsupported/invalid data. `WordleResultCard` accepts an optional saved score: an explicit number or `null` is preserved, and only an omitted (`undefined`) score invokes current calculation. Stored date and display name are also supplied. This prevents future formula changes from silently replacing an explicitly saved score; broader scoring-version policy remains undecided. Only Wordle has a saved-record renderer. No app checks were run and no milestone completion is implied.
 
+**Duplicate-submission decision (November 7):** the user chose one result per person per puzzle. In [saveResult](../lib/resultStorage.ts), `Array.some` checks whether any saved record has the same `playerId`, `gameName`, and `datePlayed`; for Wordle, the puzzle date identifies the puzzle. A match returns `"duplicate"` before appending/writing, while a successful write returns `"saved"`. Existing duplicates are retained. This illustrates checking a collection for a matching record and returning a small string union so the caller can handle expected outcomes explicitly.
+
+[ResultForm](../components/ResultForm.tsx) handles the duplicate outcome with specific feedback and preserves the input and preview. Identity still uses the trimmed, lowercased local name: `Alex` and ` alex ` produce the same temporary ID. This guard applies only to records available in that browser's storage; it is not authenticated identity or shared/server enforcement. No checks were run for this change.
+
 **References**
 
 - [React: synchronizing with effects](https://react.dev/learn/synchronizing-with-effects) — using an effect to synchronize a component with an external browser system.

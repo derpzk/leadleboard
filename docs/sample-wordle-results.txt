@@ -1,0 +1,85 @@
+SAMPLE WORDLE RESULTS
+
+These are invented examples for trying the form, not actual puzzle solutions.
+Copy one block at a time, starting with “Wordle” and ending with its last tile row.
+Do not copy the example label or separator. Enter any player name in the form.
+
+1 guess — expected score: 100
+
+Wordle 1,960 1/6
+
+🟩🟩🟩🟩🟩
+
+----------------------------------------
+2 guesses — expected score: 90
+
+Wordle 1,961 2/6
+
+⬛🟨⬛🟩⬛
+🟩🟩🟩🟩🟩
+
+----------------------------------------
+3 guesses, hard mode — expected score: 80
+
+Wordle 1,962 3/6*
+
+⬛🟨⬛⬛🟩
+🟩⬛🟨⬛🟩
+🟩🟩🟩🟩🟩
+
+----------------------------------------
+4 guesses, light tiles — expected score: 70
+
+Wordle 1,963 4/6
+
+⬜🟨⬜⬜⬜
+⬜⬜🟩🟨⬜
+🟩⬜🟩⬜🟩
+🟩🟩🟩🟩🟩
+
+----------------------------------------
+5 guesses — expected score: 60
+
+Wordle 1,964 5/6
+
+⬛⬛🟨⬛⬛
+🟨⬛⬛🟨⬛
+🟩⬛⬛⬛🟩
+🟩🟩⬛🟩🟩
+🟩🟩🟩🟩🟩
+
+----------------------------------------
+6 guesses — expected score: 50
+
+Wordle 1,965 6/6
+
+⬛⬛⬛🟨⬛
+⬛🟨⬛⬛🟨
+🟩⬛⬛🟨⬛
+🟩⬛🟩⬛⬛
+🟩🟩🟩⬛🟩
+🟩🟩🟩🟩🟩
+
+----------------------------------------
+Unsuccessful, four final greens — expected score: 40
+
+Wordle 1,966 X/6
+
+⬛⬛🟨⬛⬛
+⬛🟨⬛🟨⬛
+🟩⬛⬛⬛🟩
+🟩🟩⬛⬛🟩
+🟩🟩⬛🟩🟩
+🟩🟩⬛🟩🟩
+
+----------------------------------------
+Unsuccessful, no final greens — expected score: 0
+
+Wordle 1,967 X/6
+
+⬛⬛⬛⬛⬛
+⬛⬛🟨⬛⬛
+⬛🟨⬛⬛⬛
+⬛⬛⬛🟨⬛
+🟨⬛⬛⬛⬛
+⬛🟨⬛🟨⬛

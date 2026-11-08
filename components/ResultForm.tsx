@@ -33,7 +33,11 @@ const ResultForm = () => {
       // Temporary local identity, not an authenticated account ID.
       const playerId = `local:${player.toLowerCase()}`;
       const record = preview.generateResult(playerId);
-      saveResult({ ...record, playerName: player });
+      const status = saveResult({ ...record, playerName: player });
+      if (status === "duplicate") {
+        setFeedback(`${player} already has a saved result for this ${record.gameName} puzzle in this browser.`);
+        return;
+      }
       setFeedback("Result saved in this browser. Open All results to view it.");
     } catch {
       setFeedback("Couldn't save this result in your browser. Your input is still here so you can try again.");

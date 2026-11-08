@@ -150,7 +150,7 @@ Do not silently invent rules for these unresolved questions:
 - How are a player's standardized results combined: averages, totals, best results, or another method? How are game participation, weighting, and time windows handled?
 - How are ties and missing submissions handled?
 - Which puzzle date and time zone define a day and a week?
-- Are duplicate submissions allowed, and can results be edited?
+- Duplicate submissions are disallowed for the same player/game/puzzle. The browser-local implementation checks `playerId`, `gameName`, and `datePlayed` before saving; Wordle's puzzle date identifies its puzzle. Temporary name-based identity and browser-local storage do not enforce this across devices or authenticated accounts. Whether results can be edited remains unresolved.
 - How do users create or join groups?
 - Which share formats are supported? Obtain actual examples before designing parsers, especially for Krillion.
 
