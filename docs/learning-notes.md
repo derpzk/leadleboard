@@ -393,14 +393,21 @@ Run project Git commands from `/Users/zachk/Desktop/battledle`. The following re
 | `git remote add origin <repository-url>` | First connection only: name the GitHub repository `origin`. Use the actual repository URL; do not repeat if that remote already exists. |
 | `git push -u origin main` | Push local `main` to `origin` and establish its upstream association. This assumes the intended local branch is `main`. |
 
+**Deployment type-error lesson:** the user supplied a failed deployment error, `TS2561`, because `data/sampleResults.ts` still used the obsolete `player` field after the `Result` schema changed. The fixtures were updated with explicit sample `id`/`playerId` values, optional `playerName` display snapshots, and `submitTime` instead of `submittedAt`; obsolete `message` fields were removed. An eight-guess Wordle fixture was corrected to six. These remain partial `Result<Pick<WordleResult, "guesses">>` fixtures with `null` scores, not full parsed/scored Wordle results or authenticated identities. The reusable lesson is to compare a failing object literal with its current type and update fixture consumers when shared schemas change. This source fix was not checked locally; deployment remains pending. See [the fixture implementation](../data/sampleResults.ts) and [the current record contract](../types/result.ts).
+
+**Deployment preparation (November 7, 2026):** local Git configuration points `origin` to `https://github.com/derpzk/battledle.git`; this verifies the configured URL only, not remote contents or a successful latest push. Scoring and documentation changes are uncommitted. No Vercel CLI or existing Vercel configuration was found, and no deployment account was inspected. The next user step is to commit/push those changes, then import the GitHub repository into Vercel. Vercel's Git integration supports automatic deployments from subsequent pushes; no deployment is complete yet.
+
 Never commit credentials, tokens, or other secrets. [.gitignore](../.gitignore) records files Git should ignore; it does not remove secrets already recorded in history.
 
 **References**
 
 - [Git command reference](https://git-scm.com/docs) — official details for status, staging, commits, remotes, and pushing.
 - [GitHub: Hello World](https://docs.github.com/en/get-started/using-github/hello-world) — introduces repositories, commits, branches, and the collaboration workflow.
+- [Vercel Git integration](https://vercel.com/docs/git) — repository imports and automatic deployments from Git pushes; reviewed during deployment preparation.
 
 ## Progress and next exercise
+
+- November 7 checkpoint: Milestone 3 is complete based on the user's manual local-site report that scoring and saving work. No automated checks or agent browser checks were run. Milestone 4 (first deployment) is now beginning: commit/push current scoring changes, then import the GitHub repository into Vercel.
 
 - Environment setup now includes a project Node version file and verified automatic shell switching. User verification in the existing VS Code terminal remains pending.
 - Milestone 1 is complete per the project guide: the user ran the development server and customized the homepage. Historical setup checks do not establish that later changes were verified.
