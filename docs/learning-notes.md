@@ -1,4 +1,4 @@
-# Battledle learning notes
+# leadleboard learning notes
 
 These notes record useful explanations and verified outcomes, not a transcript. **Current terminology:** a result is the complete inputted play/submission; a score is only its numeric standardized value. The user renamed components, data, types, and personal-history routes accordingly on October 31. `Result<TResult>` still has numeric `score` and nested parsed `result` fields. The rename itself did not add behavior or saving; later live-preview work is described below. No app checks were run. Suggested commands are distinguished from commands already run. See [the project guide](../AGENTS.md) for the roadmap and mentoring approach.
 
@@ -381,6 +381,8 @@ The user chose to continue using Tailwind while learning the CSS behind the util
 
 ## Git and GitHub workflow
 
+**Rename decision:** the user requested exact lowercase **leadleboard** for the project. `gh repo rename leadleboard --repo derpzk/battledle --yes` succeeded, and local `origin` now points to `https://github.com/derpzk/leadleboard.git`. Package/lockfile root names, the homepage heading, and metadata were renamed. Browser storage now uses `leadleboard.results.v1`; if that key is absent, the loader validates the entire old `battledle.results.v1` collection before copying it, and retains the old key as a backup. This preserves existing local results without trusting partially valid data. Vercel has not been renamed; the local folder is now `/Users/zachk/Desktop/leadleboard`. No app checks were run. Historical paths, commands, and backup filenames retain their original names.
+
 **Git** records version history locally: a commit captures staged changes with a message. **GitHub** hosts a remote repository so that history can be pushed off the computer and shared. Saving a file, committing it, and pushing it are separate actions. The starter supplied local Git history; the user subsequently reported that the GitHub push is complete. The remote and published contents were not independently verified.
 
 Run project Git commands from `/Users/zachk/Desktop/battledle`. The following remain reusable workflow guidance; the user's completed-push report does not establish which exact commands they used. Replace placeholder values before use.
@@ -395,7 +397,7 @@ Run project Git commands from `/Users/zachk/Desktop/battledle`. The following re
 
 **Deployment type-error lesson:** the user supplied a failed deployment error, `TS2561`, because `data/sampleResults.ts` still used the obsolete `player` field after the `Result` schema changed. The fixtures were updated with explicit sample `id`/`playerId` values, optional `playerName` display snapshots, and `submitTime` instead of `submittedAt`; obsolete `message` fields were removed. An eight-guess Wordle fixture was corrected to six. These remain partial `Result<Pick<WordleResult, "guesses">>` fixtures with `null` scores, not full parsed/scored Wordle results or authenticated identities. The reusable lesson is to compare a failing object literal with its current type and update fixture consumers when shared schemas change. This source fix was not checked locally; deployment remains pending. See [the fixture implementation](../data/sampleResults.ts) and [the current record contract](../types/result.ts).
 
-**Deployment preparation (November 7, 2026):** local Git configuration points `origin` to `https://github.com/derpzk/battledle.git`; this verifies the configured URL only, not remote contents or a successful latest push. Scoring and documentation changes are uncommitted. No Vercel CLI or existing Vercel configuration was found, and no deployment account was inspected. The next user step is to commit/push those changes, then import the GitHub repository into Vercel. Vercel's Git integration supports automatic deployments from subsequent pushes; no deployment is complete yet.
+**Deployment preparation (November 7, 2026):** local Git configuration points `origin` to `https://github.com/derpzk/leadleboard.git`; this verifies the configured URL only, not remote contents or a successful latest push. Scoring and documentation changes are uncommitted. No Vercel CLI or existing Vercel configuration was found, and no deployment account was inspected. The next user step is to commit/push those changes, then import the GitHub repository into Vercel. Vercel's Git integration supports automatic deployments from subsequent pushes; no deployment is complete yet.
 
 Never commit credentials, tokens, or other secrets. [.gitignore](../.gitignore) records files Git should ignore; it does not remove secrets already recorded in history.
 
@@ -429,3 +431,5 @@ Never commit credentials, tokens, or other secrets. [.gitignore](../.gitignore) 
 **References**
 
 - [Next.js installation](https://nextjs.org/docs/app/getting-started/installation) — official project creation options and instructions for running the development server.
+
+Local-folder rename completed November 7, 2026: the current project directory is `/Users/zachk/Desktop/leadleboard`. Earlier `battledle` paths describe historical commands and locations. Reopen this folder in VS Code and restart any development server after the move.

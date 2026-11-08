@@ -12,10 +12,12 @@ const isResult = (value: unknown): value is Result => {
     "result" in record;
 };
 
-const storageKey = "battledle.results.v1";
+const storageKey = "leadleboard.results.v1";
+const legacyStorageKey = "battledle.results.v1";
 
 export const loadResults = (): Result[] => {
-  const stored = localStorage.getItem(storageKey);
+  const currentStored = localStorage.getItem(storageKey);
+  const stored = currentStored ?? localStorage.getItem(legacyStorageKey);
   if (!stored) return [];
 
   const parsed: unknown = JSON.parse(stored);
@@ -39,7 +41,9 @@ export const loadResults = (): Result[] => {
   }
 
   // Preserve existing submissions while removing the old envelope/share text.
-  if (migrated) localStorage.setItem(storageKey, JSON.stringify(entries));
+  if (migrated || currentStored === null) {
+    localStorage.setItem(storageKey, JSON.stringify(entries));
+  }
   return entries;
 };
 

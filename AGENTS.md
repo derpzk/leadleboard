@@ -1,4 +1,4 @@
-# Battledle: project and learning guide
+# leadleboard: project and learning guide
 
 ## Project goal
 
@@ -158,14 +158,16 @@ Resolve decisions when they become relevant rather than overwhelming the user up
 
 ## Current state and next exercise
 
+- Rename decision: the user requested exact lowercase **leadleboard** everywhere. GitHub repository rename and local `origin` update to `https://github.com/derpzk/leadleboard.git` succeeded. Package/lockfile root names, homepage heading, and metadata now use `leadleboard`. Vercel has not been renamed or inspected; local folder rename remains pending. Historical paths, commands, and backup filenames below retain their original spelling. No app checks were run for the rename.
+
 Latest learning checkpoint: November 7, 2026. Tool-version observations below are historical.
 
-- Project directory: `/Users/zachk/Desktop/battledle`.
+- Project directory: `/Users/zachk/Desktop/leadleboard`.
 - The Next.js starter has been scaffolded and moved from the temporary `battledle-starter/` folder into the project root. Existing documentation and `.nvmrc` were preserved, along with the generator's initial Git commit. Package and lockfile names were updated to `battledle`.
 - Installed tools observed: Node.js 24.21.0, npm 11.19.0, Git 2.55.0, and the VS Code `code` command.
 - These are observations, not pinned version requirements. Recheck when necessary.
-- Local Git configuration points `origin` to `https://github.com/derpzk/battledle.git`; remote contents and the latest push have not been independently verified. No Supabase project or Vercel deployment has been verified.
-- `/results` shows saved browser-local ResultCards in a responsive grid. Storage is plain `Result[]` under `battledle.results.v1`, without raw share text/envelopes. Valid legacy envelopes migrate to records only after the whole collection validates. Optional `playerName` is an interim display snapshot, not authenticated identity. Saved cards render normalized result/date/score fields; explicit saved null/number scores are preserved. Submit uses a temporary local name-based ID. No backend/authentication/metrics or app checks are implied.
+- Local Git configuration points `origin` to `https://github.com/derpzk/leadleboard.git`; remote contents and the latest push have not been independently verified. No Supabase project or Vercel deployment has been verified.
+- `/results` shows saved browser-local ResultCards in a responsive grid. Storage is plain `Result[]` under `leadleboard.results.v1`, with a validated fallback migration from the retained `battledle.results.v1` backup when the new key is absent, without raw share text/envelopes. Valid legacy envelopes migrate to records only after the whole collection validates. Optional `playerName` is an interim display snapshot, not authenticated identity. Saved cards render normalized result/date/score fields; explicit saved null/number scores are preserved. Submit uses a temporary local name-based ID. No backend/authentication/metrics or app checks are implied.
 - The homepage directly shows `ResultForm` and the player leaderboard, without the submission table. A live Wordle preview derives from name/share input and appears beside the form on wider screens (stacked on mobile). Submit requires a nonempty trimmed name and valid result; the handler now saves a plain Result to browser localStorage and confirms success only after that write. Wordle score calculation exists; no server validation or authentication exists; this is browser-local saving only. No app checks were run.
 - The homepage includes a separate player leaderboard prototype with name, points, and streak columns and selectable ordering. `samplePlayers` values and IDs are display fixtures, not derived metrics or authenticated users. Point aggregation, streak definition, and time windows remain undecided. No app checks were run for it.
 - The user explicitly removed `/my-results`, `ResultBoard`, `ResultRow`, and `ResultTable`, plus the homepage history link, to reimplement them from scratch. Rebuilding is pending and is not authorization to restore those files automatically. `ResultForm`, shared/game-specific cards, `Leaderboard`, and result data/types remain. No app checks were run for removal.
@@ -191,3 +193,5 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+Local-folder rename completed November 7, 2026: the current project directory is `/Users/zachk/Desktop/leadleboard`. Earlier `battledle` paths describe historical commands and locations. Reopen this folder in VS Code and restart any development server after the move.
